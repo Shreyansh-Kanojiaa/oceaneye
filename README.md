@@ -13,3 +13,7 @@ python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 pytest
 ```
+
+## Licence
+
+Apache License 2.0 — see [LICENSE](LICENSE).
