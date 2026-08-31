@@ -12,20 +12,12 @@ t0, t1) so that repeated calls for the same candidate reproduce exactly.
 """
 
 from dataclasses import dataclass, replace
-from typing import Protocol, runtime_checkable
 
 import numpy as np
 
+from .ais import Track, interpolate
 from .config import Config
 from .fields import current, member_params, wind
-
-
-@runtime_checkable
-class TrackLike(Protocol):
-    """What seeding needs from a vessel track. `ais.Track` will satisfy this at 6.5."""
-
-    times: np.ndarray   # unix seconds UTC, ascending
-    xy: np.ndarray      # (n, 2) projected metres
 
 
 @dataclass(frozen=True, eq=False)
@@ -39,7 +31,7 @@ class Particles:
         return self.xy.shape[0]
 
 
-def seed_line_source(track: TrackLike, tau: tuple[float, float], n: int, rng) -> Particles:
+def seed_line_source(track: Track, tau: tuple[float, float], n: int, rng) -> Particles:
     """Seed `n` particles along `track` over the release window `tau` = (start, end).
 
     Seed times are stratified uniform across tau -- one draw per equal sub-interval, which
@@ -51,19 +43,20 @@ def seed_line_source(track: TrackLike, tau: tuple[float, float], n: int, rng) ->
         raise ValueError(f"tau must be (start, end) with end >= start, got {tau}")
     if n < 1:
         raise ValueError(f"n must be >= 1, got {n}")
-    times = np.asarray(track.times, dtype=float)
-    if t0 < times[0] or t1 > times[-1]:
+    # Checked on tau itself, not left to ais.interpolate: seed times fall strictly inside
+    # tau, so a tau endpoint hanging off the end of the track would never be interpolated
+    # and would pass silently. A tau outside the track's span is a bug in 6.7's tau grid.
+    if t0 < track.times[0] or t1 > track.times[-1]:
         raise ValueError(
-            f"tau ({t0}, {t1}) falls outside the track's time range ({times[0]}, {times[-1]})"
+            f"tau ({t0}, {t1}) falls outside the track's time range "
+            f"({track.times[0]}, {track.times[-1]})"
         )
 
     edges = np.linspace(t0, t1, n + 1)
     t_seed = edges[:-1] + rng.uniform(0.0, 1.0, n) * (edges[1] - edges[0])
 
-    # Moves to ais.interpolate at 6.5; np.interp is exact at the knots and linear between.
-    track_xy = np.asarray(track.xy, dtype=float)
-    xy = np.stack([np.interp(t_seed, times, track_xy[:, i]) for i in (0, 1)], axis=-1)
-    return Particles(xy=xy, t_seed=t_seed)
+    # ais.interpolate raises rather than clamping if tau runs off the end of the track.
+    return Particles(xy=interpolate(track, t_seed), t_seed=t_seed)
 
 
 def advect(

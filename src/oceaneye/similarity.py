@@ -6,8 +6,11 @@
 Weights come from `cfg.sim_weights` in the order (iou, centroid, orientation, extent) and
 are normalised by their own sum, so identical masks score exactly 1.0 for any weights.
 
-The proximity factor C multiplying the orientation and extent terms is a deliberate
-departure from the bare weighted sum in CLAUDE.md 6.4 -- see PROXIMITY GATE below. Both
+The proximity factor C on the orientation and extent terms SUPERSEDES the bare weighted sum
+written in CLAUDE.md 6.4. That formula cannot pass its own "disjoint masks score ~0"
+acceptance check -- measured 0.3046 for identical slicks 20 km apart -- and reverting to it
+silently breaks 6.7's H0 behaviour. Confirmed by Shreyansh, 31 Aug; read PROXIMITY GATE
+below before "fixing" it back. Both
 masks must live on the same `Grid`; a score between masks on different rasters is
 meaningless and raises.
 """

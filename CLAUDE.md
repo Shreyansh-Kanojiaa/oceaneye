@@ -300,7 +300,7 @@ streamlit run app/streamlit_app.py
 |---|---|---|
 | 30 Aug | Repo, env, `config.py`, `fields.py` | [x] |
 | 31 Aug | `drift.py`, `slick.py`, `similarity.py` | [x] |
-| 1 Sept | `ais.py`, `truth.py` | [ ] |
+| 1 Sept | `ais.py`, `truth.py` | [~] `ais.py` done |
 | 2 Sept | `attribution.py` — critical path | [ ] |
 | 3 Sept | `calibrate.py`, Streamlit, rehearsal, backup recording | [ ] |
 | 4 Sept | Demo | [ ] |

@@ -1,11 +1,11 @@
 """Acceptance checks for CLAUDE.md section 6.2."""
 
 import time
-from dataclasses import dataclass
 
 import numpy as np
 import pytest
 
+from oceaneye.ais import Track
 from oceaneye.config import Config
 from oceaneye.drift import Particles, advect, seed_line_source
 from oceaneye.fields import member_params
@@ -14,20 +14,11 @@ CFG = Config()
 T0 = 1_725_000_000.0   # unix seconds UTC
 
 
-@dataclass
-class StubTrack:
-    """Minimal stand-in for ais.Track (6.5). Same field names, straight line at 8 kn."""
-
-    mmsi: str
-    times: np.ndarray
-    xy: np.ndarray
-
-
-def straight_track(speed_ms=4.1, heading_rad=0.6, hours=12.0, n_knots=25) -> StubTrack:
+def straight_track(speed_ms=4.1, heading_rad=0.6, hours=12.0, n_knots=25) -> Track:
     times = T0 + np.linspace(0.0, hours * 3600.0, n_knots)
     d = (times - T0) * speed_ms
     xy = np.stack([d * np.cos(heading_rad), d * np.sin(heading_rad)], axis=-1)
-    return StubTrack(mmsi="000000001", times=times, xy=xy)
+    return Track(mmsi="000000001", times=times, xy=xy)
 
 
 def zero_fields(monkeypatch):
