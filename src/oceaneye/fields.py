@@ -17,8 +17,16 @@ from .config import Config
 
 # Calibration knobs. Kept module-level rather than in Config because only this module
 # reads them; promote to Config if drift or the UI ever needs to vary them.
-DOMAIN_M = 20_000.0          # length scale of one gyre cell, metres
-GYRE_AMPLITUDE = 0.18        # peak gyre speed, m/s
+# 60 km, not 20: at 20 km a 3 h transit ran 1.9 gyre cells out, where the current field's
+# linear dfdx term leaves its design range, which would force attribution to restrict its
+# tau grid on a geometric criterion. At 60 km a 6 h transit stays inside 1.3 cells.
+DOMAIN_M = 60_000.0          # length scale of one gyre cell, metres
+# 0.35, not 0.18: shear scales as amplitude / DOMAIN_M, so tripling the domain cut the
+# deformation of a 3 km slick to 92 m over 3 h -- below the 509 m diffusive spread, leaving
+# the flow to translate the slick without deforming it and collapsing the demo's contrast.
+# Raising the amplitude restores 6.6 deg rotation of a 3 km pair while mean and peak speed
+# (0.173 / 0.373 m/s) stay inside the 0.1-0.4 m/s design range.
+GYRE_AMPLITUDE = 0.35        # peak gyre speed, m/s
 GYRE_PERIOD_S = 12 * 3600.0  # gyre oscillation period, seconds
 MEAN_FLOW = (0.16, 0.05)     # background current, m/s -- keeps speed off zero at stagnation
 GYRE_EPS = 0.25              # cross-cell oscillation amplitude, nondimensional

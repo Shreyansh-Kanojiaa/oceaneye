@@ -111,13 +111,16 @@ def test_tracks_are_centred_on_the_box_and_span_the_window():
 def test_track_excursion_stays_within_the_measured_field_region():
     """Guards the scale coupling: tracks must not wander where the gyre stops being valid.
 
-    fields.current grows a linear dfdx term with distance, so far from the gyre cell the
-    current leaves its 0.1-0.4 m/s design range. Measured worst case is 3.4 cells out.
+    Only x is at risk. The double gyre is genuinely periodic in y -- sin(pi*y) and
+    cos(pi*y) continue into a mirrored, counter-rotating cell -- but in x the streamfunction
+    carries f = a*x^2 + b*x, whose dfdx term grows linearly and pushes the current out of
+    its 0.1-0.4 m/s design range several cells out. Attribution can then sweep tau along a
+    whole track without a geometric in-gyre restriction.
     """
-    worst = max(float((np.abs(t.xy) / FIELD_DOMAIN_M).max())
+    worst = max(float((np.abs(t.xy[:, 0]) / FIELD_DOMAIN_M).max())
                 for seed in range(12) for t in synthetic_tracks(5, CFG, seed=seed))
-    assert worst < 4.0, (
-        f"tracks reach {worst:.1f} gyre cells out; the current field is unphysical there")
+    assert worst < 2.0, (
+        f"tracks reach {worst:.1f} gyre cells out in x; the current field is unphysical there")
 
 
 def test_tracks_share_one_time_base_so_a_grid_covers_them_all():
