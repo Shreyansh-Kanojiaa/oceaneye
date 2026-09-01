@@ -3,9 +3,10 @@
 Positions are projected metres, times are unix seconds UTC. Both fields are pure
 functions of (position, time, ensemble member) -- no global random state.
 
-The ensemble is the uncertainty model: each member perturbs the current (rotation and
-scale), the windage coefficient, and the diffusivity. Member 0 is not special; drift and
-attribution average over members, and `truth.py` will hold one out.
+The ensemble is the uncertainty model. Members perturb the *forecast* -- current speed and
+direction, wind speed and direction, windage, diffusivity -- by the amount a few-hour
+forecast is actually wrong by. They are not independent draws of a different ocean. Member 0
+is not special; drift and attribution average over members, and `truth.py` holds one out.
 """
 
 from dataclasses import dataclass
@@ -32,8 +33,17 @@ MEAN_FLOW = (0.16, 0.05)     # background current, m/s -- keeps speed off zero a
 GYRE_EPS = 0.25              # cross-cell oscillation amplitude, nondimensional
 
 WIND_PERIOD_S = 36 * 3600.0  # wind direction rotation period, seconds
-WIND_SPEED_RANGE = (6.0, 9.0)  # per-member base wind speed, m/s
+WIND_SPEED_MS = 7.5          # base wind speed, m/s
+WIND_DIR_RAD = 2.0           # base wind direction at T_START, radians
 WIND_SHEAR = 0.4             # spatial variation of wind speed across the domain, m/s
+
+# Perturbation magnitudes, set from forecast-error scale BEFORE seeing any posterior and
+# frozen from 2 Sept. A few-hour surface-current or wind forecast is wrong by roughly a
+# third in speed and 15 deg in direction; windage is uncertain to +/-30% of 0.03; eddy
+# diffusivity to within a factor of ~1.5. Do not adjust these to move a result.
+SPEED_ERR = 0.30             # fractional, on current speed, wind speed and windage
+DIR_ERR_DEG = 15.0           # on current and wind direction
+DIFFUSIVITY_ERR = 0.50       # fractional
 
 
 @dataclass(frozen=True)
@@ -52,14 +62,19 @@ class MemberParams:
 def member_params(member: int, cfg: Config) -> MemberParams:
     """Perturbations for one ensemble member. Same (seed, member) -> same numbers."""
     rng = np.random.default_rng([cfg.seed, member])
-    lo, hi = WIND_SPEED_RANGE
+    err = lambda f: rng.uniform(1.0 - f, 1.0 + f)  # noqa: E731
     return MemberParams(
-        rotation_rad=np.deg2rad(rng.uniform(-12.0, 12.0)),
-        scale=rng.uniform(0.85, 1.15),
-        windage=cfg.windage * rng.uniform(0.7, 1.3),
-        diffusivity=cfg.diffusivity * rng.uniform(0.5, 2.0),
-        wind_speed=rng.uniform(lo, hi),
-        wind_phase_rad=rng.uniform(0.0, 2 * np.pi),
+        rotation_rad=np.deg2rad(rng.uniform(-DIR_ERR_DEG, DIR_ERR_DEG)),
+        scale=err(SPEED_ERR),
+        windage=cfg.windage * err(SPEED_ERR),
+        diffusivity=cfg.diffusivity * err(DIFFUSIVITY_ERR),
+        wind_speed=WIND_SPEED_MS * err(SPEED_ERR),
+        # Perturbed about a SHARED base direction, not drawn over the full circle. A
+        # uniform(0, 2pi) phase made every member blow a 0.2 m/s windage drift a different
+        # way, scattering member centroids over 12 km against a 3 km displacement and a
+        # 4.6 km slick -- so no member ever overlapped the observation and the mean IoU of
+        # a *correct* prediction was 0.094. That is not forecast uncertainty, it is noise.
+        wind_phase_rad=WIND_DIR_RAD + np.deg2rad(rng.uniform(-DIR_ERR_DEG, DIR_ERR_DEG)),
     )
 
 
