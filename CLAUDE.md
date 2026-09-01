@@ -302,7 +302,7 @@ streamlit run app/streamlit_app.py
 | 31 Aug | `drift.py`, `slick.py`, `similarity.py` | [x] |
 | 1 Sept | `ais.py`, `truth.py` | [x] |
 | 2 Sept | `attribution.py` — critical path | [x] |
-| 3 Sept | `calibrate.py`, Streamlit, rehearsal, backup recording | [ ] |
+| 3 Sept | `calibrate.py`, Streamlit, rehearsal, backup recording | [~] `calibrate.py` + Streamlit done; rehearsal + recording pending |
 | 4 Sept | Demo | [ ] |
 
 If 2 September ends without a working posterior, drop to an ensemble of 8 and move on.

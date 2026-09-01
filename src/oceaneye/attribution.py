@@ -115,6 +115,22 @@ def likelihood(track: Track, tau: tuple[float, float], obs_mask: np.ndarray,
     return float(np.mean(sims))
 
 
+def predicted_footprint(track: Track, tau: tuple[float, float], t_obs: float,
+                        grid: Grid, cfg: Config) -> np.ndarray:
+    """Fraction of ensemble members that put oil in each cell, for one (vessel, tau).
+
+    The honest thing to draw next to an observation: not one member's mask pretending to
+    be a forecast, but how much of the ensemble agrees. Returns float (H, W) in [0, 1].
+    """
+    rng = np.random.default_rng([cfg.seed, int(track.mmsi), int(tau[0]), int(tau[1])])
+    p0 = seed_line_source(track, tau, cfg.n_particles, rng)
+    members = list(ensemble_members(cfg))
+    total = np.zeros(grid.shape, dtype=float)
+    for m in members:
+        total += to_mask(advect(p0, tau[0], t_obs, m, cfg), grid)
+    return total / len(members)
+
+
 def posterior(obs_mask: np.ndarray, tracks: list[Track], t_obs: float, grid: Grid,
               cfg: Config) -> AttributionResult:
     """Rank (vessel, tau) hypotheses against each other and against H0.
