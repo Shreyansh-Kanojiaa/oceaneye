@@ -10,3 +10,4 @@ venv/
 outputs/
 .DS_Store
 !outputs/.gitkeep
+team-docs/
