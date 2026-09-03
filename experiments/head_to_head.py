@@ -197,7 +197,8 @@ def analyse(bins: int) -> None:
     # --- figures ---
     fig, ax = plt.subplots(figsize=(4.8, 4.2), dpi=140)
     accs = [kb / n, ko / n]
-    errs = [[accs[0] - lb, accs[1] - lo], [ub - accs[0], uo - accs[1]]]
+    errs = [[max(0.0, accs[0] - lb), max(0.0, accs[1] - lo)],
+            [max(0.0, ub - accs[0]), max(0.0, uo - accs[1])]]
     ax.bar(["geometry\n(Cerulean-style)", "physics\n(forward drift)"], accs,
            yerr=errs, capsize=6, color=["#9ecae1", "#08519c"], width=0.55)
     for i, a in enumerate(accs):
@@ -216,8 +217,9 @@ def analyse(bins: int) -> None:
                                          ("physics (ours)", "#08519c")]):
         ys = [r[2 + 2 * j] for r in rows]
         ci = [r[3 + 2 * j] for r in rows]
-        ax.errorbar(xs, ys, yerr=[[y - c[0] for y, c in zip(ys, ci, strict=True)],
-                                  [c[1] - y for y, c in zip(ys, ci, strict=True)]],
+        # max(0, .): a Wilson bound can land a rounding error past the point estimate.
+        ax.errorbar(xs, ys, yerr=[[max(0.0, y - c[0]) for y, c in zip(ys, ci, strict=True)],
+                                  [max(0.0, c[1] - y) for y, c in zip(ys, ci, strict=True)]],
                     fmt="o-", color=colour, capsize=4, lw=1.6, label=label)
     for x, r in zip(xs, rows, strict=True):
         ax.text(x, 1.03, f"n={r[1]}", ha="center", fontsize=7, color="0.35")
