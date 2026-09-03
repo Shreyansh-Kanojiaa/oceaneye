@@ -1,0 +1,24 @@
+# Theme for an operational tool, not a dashboard demo: flat panels (no radius, no shadow),
+# a single accent colour, and a monospace face reserved for identifiers and numbers.
+# Palette mirrors oceaneye.plotting's INK/SLATE/LINE/PAPER/PANEL/MARINE tokens -- change
+# both places together if this ever moves.
+
+[theme]
+base = "dark"
+primaryColor = "#5b9bd5"
+backgroundColor = "#0c1016"
+secondaryBackgroundColor = "#141a22"
+textColor = "#e7ecf0"
+borderColor = "#2b333d"
+linkColor = "#5b9bd5"
+font = "Public Sans:https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap"
+codeFont = "IBM Plex Mono:https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+baseRadius = "none"
+buttonRadius = "none"
+baseFontSize = 15
+dataframeBorderColor = "#2b333d"
+dataframeHeaderBackgroundColor = "#141a22"
+
+[theme.sidebar]
+backgroundColor = "#141a22"
+borderColor = "#2b333d"

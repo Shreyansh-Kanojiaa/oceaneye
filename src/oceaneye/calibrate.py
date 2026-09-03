@@ -19,6 +19,7 @@ from sklearn.isotonic import IsotonicRegression
 
 from .attribution import posterior
 from .config import Config
+from .plotting import LINE, MARINE, SLATE
 from .truth import make_scenario
 
 PRESENT_FRACTION = 0.70   # the rest hide the polluter, so H0 is the correct answer
@@ -149,11 +150,11 @@ def reliability_diagram(df: pd.DataFrame, ax, bins: int = 10,
             ys.append(correct[m].mean())
             ns.append(int(m.sum()))
 
-    ax.plot([0, 1], [0, 1], "--", color="0.6", lw=1, label="perfectly calibrated")
-    ax.plot(xs, ys, "o-", color="#1f77b4", lw=1.6, ms=6, label="observed")
+    ax.plot([0, 1], [0, 1], "--", color=LINE, lw=1.2, label="perfectly calibrated")
+    ax.plot(xs, ys, "o-", color=MARINE, lw=1.6, ms=6, label="observed")
     for x, y, n in zip(xs, ys, ns, strict=True):
         ax.annotate(str(n), (x, y), textcoords="offset points", xytext=(0, 7),
-                    ha="center", fontsize=7, color="0.35")
+                    ha="center", fontsize=7, color=SLATE)
     lo = min(0.0, min(xs, default=0.0))
     ax.set(xlim=(lo, 1.0), ylim=(0.0, 1.0),
            xlabel="confidence (top-ranked probability)", ylabel="accuracy")

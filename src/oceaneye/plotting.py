@@ -5,13 +5,49 @@ the AIS is generated and the slick is drifted rather than segmented from SAR, an
 that leaves the room without saying so is a figure that can be mistaken for a detection.
 """
 
+import matplotlib as mpl
 import numpy as np
 
+# Shared palette. Named once here and reused by the Streamlit chrome (app/streamlit_app.py
+# imports these directly) so the plots and the surrounding UI are one consistent instrument,
+# not a chart library's defaults sitting inside someone else's colour scheme.
+# Dark, control-room tones -- kept flat and desaturated throughout: nothing here is meant
+# to glow, so accents get their contrast from value against PAPER/PANEL, never saturation.
+INK = "#e7ecf0"        # primary text
+SLATE = "#8b96a3"      # secondary text, axis labels, muted tracks and bars
+LINE = "#2b333d"       # hairline borders, gridlines -- subtle, not a fill colour
+PAPER = "#0c1016"      # page / figure background
+PANEL = "#141a22"      # panel / sidebar background, one step up from PAPER
+MARINE = "#5b9bd5"     # single accent colour: the true/highlighted vessel, primary emphasis
+ALERT = "#c1554c"      # H0 / miss / caution — used sparingly, never as decoration
+CONFIRM = "#5f9468"    # recovered / correct
+
 BANNER = "SYNTHETIC SCENARIO — simulated ocean, generated AIS, drifted slick"
-BANNER_COLOUR = "#b00020"
+BANNER_COLOUR = ALERT
 PAD_KM = 18.0          # half-width of the scene panel around the observed slick
 DISCLAIMER = ("Ranked probability for investigation. This is not a determination that any "
               "vessel caused a discharge.")
+
+# Applied once at import: every figure in the project -- the app, run_demo.py, the
+# calibration script, the head-to-head benchmark -- draws with the same restrained,
+# gridded, chart-like style instead of matplotlib's defaults.
+mpl.rcParams.update({
+    "font.family": "sans-serif",
+    "font.sans-serif": ["Public Sans", "Helvetica", "Arial", "DejaVu Sans"],
+    "text.color": INK,
+    "axes.edgecolor": SLATE,
+    "axes.labelcolor": INK,
+    "axes.facecolor": PANEL,
+    "axes.grid": True,
+    "axes.axisbelow": True,
+    "grid.color": LINE,
+    "grid.linewidth": 0.6,
+    "xtick.color": SLATE,
+    "ytick.color": SLATE,
+    "figure.facecolor": PAPER,
+    "savefig.facecolor": PAPER,
+    "legend.frameon": False,
+})
 
 
 def banner(fig) -> None:
@@ -41,9 +77,9 @@ def plot_scene(ax, scenario, footprint=None, highlight_mmsi=None) -> None:
     for track in scenario.tracks:
         hit = track.mmsi == highlight_mmsi
         ax.plot(*_km(track.xy).T, lw=2.0 if hit else 1.0,
-                color="#111111" if hit else "#888888", zorder=3 if hit else 2)
+                color=MARINE if hit else SLATE, zorder=3 if hit else 2)
         ax.annotate(track.mmsi[-4:], _km(track.xy[len(track.xy) // 2]), fontsize=7,
-                    color="#111111" if hit else "#888888",
+                    color=MARINE if hit else SLATE,
                     weight="bold" if hit else "normal",
                     textcoords="offset points", xytext=(4, 0))
 
@@ -63,9 +99,9 @@ def plot_posterior(ax, result, true_mmsi=None) -> None:
     """One bar per vessel plus H0. The bars do not sum to 1 -- H0 carries mass."""
     labels = list(result.by_vessel.index) + ["H₀ unknown source"]
     values = list(result.by_vessel.values) + [result.p_unknown]
-    colours = ["#08519c" if m == true_mmsi else
-               "#b00020" if m.startswith("H₀") else "#9ecae1" for m in labels]
-    ax.barh(labels, values, color=colours)
+    colours = [MARINE if m == true_mmsi else
+               ALERT if m.startswith("H₀") else SLATE for m in labels]
+    ax.barh(labels, values, color=colours, edgecolor=PAPER, linewidth=0.6)
     ax.invert_yaxis()
     ax.set(xlim=(0, max(max(values) * 1.25, 0.1)), xlabel="posterior probability")
     for y, v in enumerate(values):
@@ -81,10 +117,10 @@ def plot_tau(ax, result, true_tau, t0, top_mmsi=None) -> None:
     rows = result.table[result.table["mmsi"] == top].head(6) if top is not None else []
 
     if true_tau is not None:
-        ax.axvspan(*mins(true_tau), color="#08519c", alpha=0.20, label="planted τ")
+        ax.axvspan(*mins(true_tau), color=MARINE, alpha=0.15, label="planted τ")
     for y, (_, row) in enumerate(rows.iterrows()):
         ax.plot(mins([row["tau_start"], row["tau_end"]]), [y, y], lw=6,
-                color="#b00020", alpha=min(1.0, 0.25 + float(row["p"]) * 4))
+                color=ALERT, alpha=min(1.0, 0.25 + float(row["p"]) * 4))
         ax.text(mins(row["tau_end"]) + 3, y, f"p={row['p']:.3f}", va="center", fontsize=7)
     ax.set(xlabel="minutes after AIS window start", yticks=[],
            title=f"recovered τ for {top}" if top else "no candidate τ")
