@@ -20,6 +20,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from oceaneye.attribution import posterior, predicted_footprint  # noqa: E402
 from oceaneye.calibrate import ece, reliability_diagram  # noqa: E402
 from oceaneye.config import T_START, Config  # noqa: E402
+from oceaneye.explain import why_this_answer  # noqa: E402
 from oceaneye.plotting import (  # noqa: E402
     ALERT,
     BANNER,
@@ -171,6 +172,11 @@ with right:
         plot_posterior(ax, r, true_mmsi=sc.true_mmsi)
         fig.tight_layout()
         st.pyplot(fig)
+
+    st.subheader("Why this answer")
+    with st.container(border=True):
+        for sentence in why_this_answer(r, None if hidden else sc.true_tau, T_START):
+            st.markdown(f"- {sentence}")
 
     st.subheader("Release window recovery")
     with st.container(border=True):
