@@ -40,8 +40,8 @@ def main() -> None:
     t0 = time.time()
     print(f"SYNTHETIC SCENARIOS -- {args.trials} trials, {cfg.n_members} members, "
           f"{cfg.n_particles} particles", flush=True)
-    df = run_trials(args.trials, cfg, progress=not args.quiet)
-    df.to_csv(OUT / "trials.csv", index=False)
+    df = run_trials(args.trials, cfg, progress=not args.quiet,
+                    checkpoint=OUT / "trials.csv")
     print(f"\n{len(df)} trials in {(time.time() - t0) / 60:.1f} min", flush=True)
 
     conf = df["confidence"]

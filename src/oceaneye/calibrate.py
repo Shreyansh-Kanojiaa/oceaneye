@@ -68,12 +68,17 @@ def hidden_flags(n: int, cfg: Config) -> np.ndarray:
     return np.random.default_rng([cfg.seed, 0xCA11B]).random(n) >= PRESENT_FRACTION
 
 
-def run_trials(n: int, cfg: Config | None = None, progress: bool = False) -> pd.DataFrame:
+def run_trials(n: int, cfg: Config | None = None, progress: bool = False,
+               checkpoint=None) -> pd.DataFrame:
     """`n` scored scenarios as a DataFrame [seed, hidden, top, confidence, correct].
 
     Which trials hide the polluter is drawn once from `cfg.seed`, so the same n gives the
     same mix. A scenario that raises -- a slick drifting outside the current field's design
     range -- is skipped and reported, rather than killing a 40-minute run at trial 137.
+
+    `checkpoint` is a path rewritten after every trial. A 200-trial run is ~40 minutes and
+    something will eventually kill it; a partial run is a usable calibration set, an empty
+    file is not.
     """
     cfg = cfg or Config()
     hidden = hidden_flags(n, cfg)
@@ -85,6 +90,8 @@ def run_trials(n: int, cfg: Config | None = None, progress: bool = False) -> pd.
         except ValueError as exc:
             skipped.append((i + 1, str(exc)))
             continue
+        if checkpoint is not None:
+            pd.DataFrame([vars(r) for r in rows]).to_csv(checkpoint, index=False)
         if progress:
             t = rows[-1]
             print(f"  trial {i + 1:4d}/{n}  {'H0-case' if t.hidden else 'vessel '}  "
