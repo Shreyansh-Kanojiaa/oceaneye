@@ -201,8 +201,8 @@ def analyse(bins: int) -> None:
             [max(0.0, ub - accs[0]), max(0.0, uo - accs[1])]]
     ax.bar(["geometry\n(Cerulean-style)", "physics\n(forward drift)"], accs,
            yerr=errs, capsize=6, color=["#9ecae1", "#08519c"], width=0.55)
-    for i, a in enumerate(accs):
-        ax.text(i, a + 0.03, f"{a:.2f}", ha="center", fontsize=9)
+    for i, (a, top) in enumerate(zip(accs, (ub, uo), strict=True)):
+        ax.text(i, top + 0.025, f"{a:.2f}", ha="center", fontsize=9)   # clear of the cap
     ax.set(ylim=(0, 1.08), ylabel="top-1 accuracy",
            title=f"Head-to-head, N={n} synthetic scenes\n95% Wilson CIs; "
                  f"McNemar p={p_mc:.3f}")
