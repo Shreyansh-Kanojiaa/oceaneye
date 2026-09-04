@@ -23,7 +23,7 @@ import pandas as pd
 
 from .ais import Track
 from .config import Config, ensemble_members
-from .drift import advect, seed_line_source
+from .drift import Particles, advect, seed_line_source
 from .similarity import score
 from .slick import Grid, morphology, to_mask
 
@@ -115,20 +115,43 @@ def likelihood(track: Track, tau: tuple[float, float], obs_mask: np.ndarray,
     return float(np.mean(sims))
 
 
+def footprint_frames(track: Track, tau: tuple[float, float], t_obs: float, grid: Grid,
+                     cfg: Config, n_frames: int = 1) -> tuple[np.ndarray, np.ndarray]:
+    """Ensemble footprint at `n_frames` checkpoints from the release window out to `t_obs`.
+
+    Returns `(times (F,) unix seconds, frames (F, H, W) in [0, 1])`, each frame the fraction
+    of ensemble members putting oil in that cell at that time. Particles not yet released
+    are excluded, so early frames show the line source being laid down rather than the whole
+    future discharge sitting on the track at once.
+
+    Costs one full advection per member however many frames are asked for -- the checkpoints
+    chain, they do not restart. Chaining draws different noise than a single hop, so a
+    multi-frame run's last frame is a different (equally valid) realisation from `n_frames=1`.
+    """
+    rng = np.random.default_rng([cfg.seed, int(track.mmsi), int(tau[0]), int(tau[1])])
+    p0 = seed_line_source(track, tau, cfg.n_particles, rng)
+    # Drop t=tau[0] itself: nothing is released at the instant the window opens.
+    times = np.linspace(float(tau[0]), float(t_obs), n_frames + 1)[1:]
+    members = list(ensemble_members(cfg))
+    frames = np.zeros((len(times), *grid.shape), dtype=float)
+    for m in members:
+        p, t_prev = p0, float(tau[0])
+        for i, t in enumerate(times):
+            p = advect(p, t_prev, t, m, cfg)
+            out = p.t_seed <= t
+            frames[i] += to_mask(Particles(xy=p.xy[out], t_seed=p.t_seed[out]), grid)
+            t_prev = t
+    return times, frames / len(members)
+
+
 def predicted_footprint(track: Track, tau: tuple[float, float], t_obs: float,
                         grid: Grid, cfg: Config) -> np.ndarray:
-    """Fraction of ensemble members that put oil in each cell, for one (vessel, tau).
+    """Fraction of ensemble members that put oil in each cell at `t_obs`, for one (vessel, tau).
 
     The honest thing to draw next to an observation: not one member's mask pretending to
     be a forecast, but how much of the ensemble agrees. Returns float (H, W) in [0, 1].
     """
-    rng = np.random.default_rng([cfg.seed, int(track.mmsi), int(tau[0]), int(tau[1])])
-    p0 = seed_line_source(track, tau, cfg.n_particles, rng)
-    members = list(ensemble_members(cfg))
-    total = np.zeros(grid.shape, dtype=float)
-    for m in members:
-        total += to_mask(advect(p0, tau[0], t_obs, m, cfg), grid)
-    return total / len(members)
+    return footprint_frames(track, tau, t_obs, grid, cfg)[1][0]
 
 
 def posterior(obs_mask: np.ndarray, tracks: list[Track], t_obs: float, grid: Grid,

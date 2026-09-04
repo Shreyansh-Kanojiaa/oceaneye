@@ -17,7 +17,7 @@ import streamlit as st
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from oceaneye.attribution import posterior, predicted_footprint  # noqa: E402
+from oceaneye.attribution import footprint_frames, posterior  # noqa: E402
 from oceaneye.calibrate import ece, reliability_diagram  # noqa: E402
 from oceaneye.config import T_START, Config  # noqa: E402
 from oceaneye.explain import why_this_answer  # noqa: E402
@@ -37,6 +37,7 @@ from oceaneye.plotting import (  # noqa: E402
 from oceaneye.truth import make_scenario  # noqa: E402
 
 TRIALS = ROOT / "outputs" / "trials.csv"
+N_FRAMES = 12          # drift checkpoints between the release window and the observation
 
 st.set_page_config(page_title="OCEAN-EYE — slick attribution", layout="wide")
 
@@ -113,13 +114,13 @@ def attribute(seed: int, hidden: bool):
     sc = make_scenario(seed, hide_polluter=hidden, cfg=cfg)
     r = posterior(sc.obs_mask, sc.tracks, sc.t_obs, sc.grid, cfg)
     top = r.by_vessel.index[0] if len(r.by_vessel) else None
-    footprint = None
+    times = frames = tau = None
     if top is not None:
         best = r.table[r.table["mmsi"] == top].iloc[0]
         track = next(t for t in sc.tracks if t.mmsi == top)
-        footprint = predicted_footprint(
-            track, (best["tau_start"], best["tau_end"]), sc.t_obs, sc.grid, cfg)
-    return sc, r, top, footprint
+        tau = (best["tau_start"], best["tau_end"])
+        times, frames = footprint_frames(track, tau, sc.t_obs, sc.grid, cfg, N_FRAMES)
+    return sc, r, top, tau, times, frames
 
 
 with st.sidebar:
@@ -141,7 +142,7 @@ with st.sidebar:
     </table>
     """, unsafe_allow_html=True)
 
-sc, r, top, footprint = attribute(int(seed), bool(hidden))
+sc, r, top, tau, times, frames = attribute(int(seed), bool(hidden))
 mins = lambda t: (np.asarray(t, dtype=float) - T_START) / 60.0  # noqa: E731
 
 FLAT = {"delta_color": "off", "delta_arrow": "off"}   # a plain readout, no dashboard chrome
@@ -161,8 +162,22 @@ left, right = st.columns([1.2, 1])
 with left:
     st.subheader("Scene")
     with st.container(border=True):
+        i = len(times) - 1 if times is not None else None
+        if times is not None:
+            # The scrub is the argument: at the release the oil sits on the track, and by
+            # t_obs the ocean has carried and turned it onto the observed slick. Geometry
+            # alone only ever sees the last frame.
+            i = st.select_slider(
+                "Drift clock", options=range(len(times)), value=len(times) - 1,
+                format_func=lambda k: f"+{(times[k] - tau[0]) / 60:.0f} min after release",
+                help="Forward drift of the top candidate's discharge, ensemble agreement "
+                     "shaded. The observed slick (orange) stays fixed at t_obs.")
         fig, ax = plt.subplots(figsize=(6.4, 5.6))
-        plot_scene(ax, sc, footprint=footprint, highlight_mmsi=top)
+        plot_scene(ax, sc, footprint=None if i is None else frames[i], highlight_mmsi=top)
+        if i is not None:
+            ax.set_title(f"predicted slick at +{(times[i] - tau[0]) / 60:.0f} min "
+                         f"(blue) vs observed at +{(sc.t_obs - tau[0]) / 60:.0f} min "
+                         "(orange)", fontsize=9)
         fig.tight_layout()
         st.pyplot(fig)
 with right:

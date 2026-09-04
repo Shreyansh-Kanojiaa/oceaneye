@@ -5,16 +5,19 @@ number about this system."""
 import numpy as np
 import pytest
 
+from oceaneye.ais import interpolate
 from oceaneye.attribution import (
     GATE_SPEED_MS,
     AttributionResult,
+    footprint_frames,
     gate,
     likelihood,
     posterior,
+    predicted_footprint,
     tau_grid,
 )
 from oceaneye.config import T_START, Config, ensemble_members, truth_member
-from oceaneye.slick import Grid
+from oceaneye.slick import Grid, morphology
 from oceaneye.truth import make_scenario
 
 # Reduced ensemble: the contracts under test (normalisation, gating, tau bounds) do not
@@ -184,3 +187,34 @@ def test_full_fidelity_acceptance_report(capsys):
 def test_result_type():
     _, r = run(3)
     assert isinstance(r, AttributionResult)
+
+
+def test_frames_travel_from_the_release_site_to_the_observed_slick():
+    """The drift clock's whole claim: the ocean moves the oil off the track that laid it.
+
+    If the first and last frames sat in the same place the scrubber would be decoration,
+    and geometry-only attribution would be right.
+    """
+    sc = make_scenario(7, cfg=FAST)
+    track = next(t for t in sc.tracks if t.mmsi == sc.true_mmsi)
+    times, frames = footprint_frames(track, sc.true_tau, sc.t_obs, sc.grid, FAST, n_frames=8)
+
+    assert times.shape == (8,) and frames.shape == (8, *sc.grid.shape)
+    assert times[0] > sc.true_tau[0] and times[-1] == pytest.approx(sc.t_obs)
+    assert frames.min() >= 0.0 and frames.max() <= 1.0
+
+    obs = morphology(sc.obs_mask, sc.grid)["centroid_xy"]
+    release = interpolate(track, np.array([sc.true_tau[0]]))[0]
+    first = morphology(frames[0] > 0, sc.grid)["centroid_xy"]
+    last = morphology(frames[-1] > 0, sc.grid)["centroid_xy"]
+
+    assert np.hypot(*(first - release)) < np.hypot(*(last - release))   # it travelled
+    assert np.hypot(*(last - obs)) < np.hypot(*(first - obs))           # towards the slick
+
+
+def test_predicted_footprint_is_the_last_frame():
+    sc = make_scenario(3, cfg=FAST)
+    track = next(t for t in sc.tracks if t.mmsi == sc.true_mmsi)
+    one = predicted_footprint(track, sc.true_tau, sc.t_obs, sc.grid, FAST)
+    assert one == pytest.approx(footprint_frames(
+        track, sc.true_tau, sc.t_obs, sc.grid, FAST)[1][0])
