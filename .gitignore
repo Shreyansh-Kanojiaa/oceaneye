@@ -10,4 +10,8 @@ venv/
 outputs/
 .DS_Store
 !outputs/.gitkeep
+# The hosted app has no way to run a 35-minute calibration, so the trial set it
+# reads has to ship with the repo. The figures stay ignored -- they are redrawn
+# from this on every run.
+!outputs/trials.csv
 team-docs/

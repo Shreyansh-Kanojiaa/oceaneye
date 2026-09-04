@@ -1,0 +1,9 @@
+# Streamlit Community Cloud reads this file, not pyproject.toml, so the two have to agree.
+# Mirrors [project.dependencies] in pyproject.toml -- if you add a dependency there, add it
+# here, or the hosted app dies on import with no warning at build time.
+numpy
+scipy
+pandas
+matplotlib
+scikit-learn
+streamlit
