@@ -173,7 +173,8 @@ with left:
                 help="Forward drift of the top candidate's discharge, ensemble agreement "
                      "shaded. The observed slick (orange) stays fixed at t_obs.")
         fig, ax = plt.subplots(figsize=(6.4, 5.6))
-        plot_scene(ax, sc, footprint=None if i is None else frames[i], highlight_mmsi=top)
+        plot_scene(ax, sc, footprint=None if i is None else frames[i], highlight_mmsi=top,
+                   t=sc.t_obs if i is None else times[i])
         if i is not None:
             ax.set_title(f"predicted slick at +{(times[i] - tau[0]) / 60:.0f} min "
                          f"(blue) vs observed at +{(sc.t_obs - tau[0]) / 60:.0f} min "

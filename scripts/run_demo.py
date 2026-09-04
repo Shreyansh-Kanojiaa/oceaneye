@@ -64,7 +64,7 @@ def main() -> None:
             track, (best["tau_start"], best["tau_end"]), sc.t_obs, sc.grid, cfg)
 
     fig, axes = plt.subplots(2, 2, figsize=(11.5, 9.0), dpi=130)
-    plot_scene(axes[0, 0], sc, footprint=footprint, highlight_mmsi=top)
+    plot_scene(axes[0, 0], sc, footprint=footprint, highlight_mmsi=top, t=sc.t_obs, cfg=cfg)
     plot_posterior(axes[0, 1], r, true_mmsi=sc.true_mmsi)
     plot_tau(axes[1, 0], r, sc.true_tau if not args.hide_polluter else None, T_START, top)
 
